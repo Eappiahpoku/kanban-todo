@@ -23,7 +23,7 @@
     <draggable
       :modelValue="modelValue"
       @update:modelValue="onTasksChange"
-      group="kanban-tasks"  
+      group="kanban-tasks"
       @change="onDragChange"
       item-key="id"
       class="task-list flex-1 overflow-y-auto min-h-[100px]"
@@ -32,20 +32,46 @@
     >
       <template #item="{ element }: { element: Task }">
         <div
-          class="task-placeholder p-3 mb-2 bg-white rounded shadow cursor-move flex items-center"
+          class="task-placeholder p-3 mb-2 bg-white rounded shadow cursor-move flex items-start gap-3"
           :aria-label="`Task: ${element.title}`"
           role="listitem"
         >
+          <!-- Mark as Completed Checkbox -->
           <input
             type="checkbox"
-            class="mr-3 w-6 h-6 accent-green-600"
+            class="mr-2 w-6 h-6 accent-green-600 mt-1"
             :checked="!!element.completed"
             @change="() => emit('completeTask', element.id)"
             aria-label="Mark as completed"
           />
-          <span class="flex-1">
-            {{ element.title }}
-          </span>
+          <!-- ===== [New Feature] START: Task Details Card ===== -->
+          <div class="flex-1 min-w-0">
+            <!-- Task Title -->
+            <div class="font-medium text-base text-gray-900 truncate">
+              {{ element.title }}
+            </div>
+            <!-- Priority & Due Date Row -->
+            <div class="flex items-center gap-3 mt-1">
+              <!-- Priority Dot & Label -->
+              <span class="flex items-center gap-1 text-sm">
+                <span
+                  :class="[
+                    'inline-block w-3 h-3 rounded-full',
+                    element.priority === 'high' ? 'bg-red-500' :
+                    element.priority === 'medium' ? 'bg-yellow-400' :
+                    'bg-blue-500'
+                  ]"
+                  aria-label="Priority"
+                ></span>
+                <span class="capitalize text-gray-700">{{ element.priority }}</span>
+              </span>
+              <!-- Due Date -->
+              <span v-if="element.dueDate" class="text-xs text-gray-500">
+                • Due: {{ formatDueDate(element.dueDate) }}
+              </span>
+            </div>
+          </div>
+          <!-- ===== [New Feature] END ===== -->
         </div>
       </template>
     </draggable>
@@ -72,6 +98,9 @@ interface Task {
   title: string
   column: string // 'my-day', 'my-week', 'masterlist'
   completed?: boolean
+  priority: 'low' | 'medium' | 'high' // ===== [New Feature] START =====
+  dueDate?: string // Always string, never undefined
+  // ===== [New Feature] END =====
 }
 
 interface Props {
@@ -88,7 +117,7 @@ const emit = defineEmits<{
   (e: 'update:modelValue', value: Task[]): void
   (e: 'addTask', boardId: string): void
   (e: 'completeTask', taskId: string): void
-  (e: 'moveTask', payload: { task: Task; toBoard: string; fromBoard: string }): void // ===== [New Feature] START =====
+  (e: 'moveTask', payload: { task: Task; toBoard: string; fromBoard: string }): void
 }>()
 
 // ===== Main Logic =====
@@ -118,6 +147,18 @@ function onDragChange(evt: any) {
       fromBoard: evt.added.element.column,
     })
   }
+}
+
+// ===== Helper Functions =====
+/**
+ * Formats the due date for display.
+ * @param dueDate - string (YYYY-MM-DD or similar)
+ * @returns string in readable format or 'N/A'
+ */
+function formatDueDate(dueDate?: string): string {
+  if (!dueDate) return 'N/A'
+  // Simple formatting: show as-is, or you can use Intl.DateTimeFormat for better UX
+  return dueDate
 }
 
 // ===== Watchers =====
